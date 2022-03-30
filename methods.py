@@ -1,14 +1,15 @@
+import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 import re
 import string
-
+import umap
+from nltk.stem import SnowballStemmer
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import seaborn as sns
 from nltk.corpus import stopwords
 
-# Stop placed at global scope - why?
 stop = set(stopwords.words("english"))
 
 
@@ -38,11 +39,41 @@ def k_means_clustering_tsne(X, k, df):
     print("\nPlotting")
     sns.scatterplot(X_embedded[:, 0], X_embedded[:, 1], hue=y_pred, legend='full', palette=palette)
     plt.title("TSNE with KMeans Labels")
-    plt.savefig("Article_Clusters.png")
+    plt.savefig("Article_Clusters_Tsne.png")
     plt.show()
 
 
-def vectorise(text):
+def k_means_clustering_umap(X, k, df):
+    """
+    This function uses hte K-Means Clustering algorithm with the UMAP embedding / dimensionality
+    reduction technique
+    :param X: This is our vectorised text parameter
+    :param k: This is the number of clusters we want to use
+    :param df: This is the dataframe we're working with
+    :return:
+    """
+
+    kmeans = KMeans(n_clusters=k)
+    y_pred = kmeans.fit_predict(X.toarray())
+    df['y'] = y_pred  # just adding a column to our dataframe
+
+    reducer = umap.UMAP(metric='hellinger')
+    X_embedded = reducer.fit_transform(X)
+
+    sns.set(rc={"figure.figsize": (15, 15)})
+
+    palette = sns.hls_palette(len(set(y_pred)), l=0.4, s=0.9)
+
+    # Plotting the data
+
+    print("\nPlotting")
+    sns.scatterplot(X_embedded[:, 0], X_embedded[:, 1], hue=y_pred, legend='full', palette=palette)
+    plt.title("Umap with KMeans Labels")
+    plt.savefig("Article_Clusters_Umap.png")
+    plt.show()
+
+
+def tf_idf_vectorise(text):
     """
     This function converts a collection of raw text documents to a matrix of TF-IDF features
     :param text:
@@ -70,6 +101,18 @@ def create_vsm(doc):
     return doc
 
 
+def tokenize(doc):
+    """
+    This function divides the sentences of the document into words
+    :param doc:
+    :return: document in words
+    """
+
+    doc = doc.replace("\n", " ")
+    words = nltk.tokenize.word_tokenize(doc)
+    return words
+
+
 def remove_stop_words(row):
     """
     This function removes stop words from each row fed into the function.
@@ -81,3 +124,22 @@ def remove_stop_words(row):
     row = [word for word in row if word not in stop]
     row = " ".join(row)
     return row
+
+
+def stem(words):
+    """
+    This function will tokenize the sentence and stem the words in the sentence
+    :param words: The words that need to be stemmed
+    :return: stems
+    """
+
+    # stemmed_words = [stemmer.stem(word) for word in words]
+    #return stemmed_words
+
+
+def remove_punctuation(string):
+    punc = '''!()-[]{};:'"\,<>./?@#$%&*^'''
+    for symbol in string:
+        if symbol in punc:
+            string = string.replace(symbol, "")
+        return string
